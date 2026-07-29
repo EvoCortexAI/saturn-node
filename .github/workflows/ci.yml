@@ -20,8 +20,11 @@ jobs:
         run: |
           xcodebuild -version
           swift --version
+          python3 --version
       - name: Validate manifest
         run: swift package dump-package >/dev/null
+      - name: Validate workload compute contract
+        run: python3 scripts/validate_saturn_node_contract.py
       - name: Build and test
         run: swift test --parallel
       - name: Verify fail-closed executable
