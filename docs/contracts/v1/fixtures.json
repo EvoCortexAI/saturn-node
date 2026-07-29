@@ -1,0 +1,245 @@
+{
+  "contractVersion": "1",
+  "validationNow": "2030-01-01T00:05:00Z",
+  "authorizationContext": {
+    "nodeId": "saturn-node-01",
+    "workloadId": "agent-workload-01",
+    "deploymentId": "deployment-01",
+    "modelId": "qwen3-8b-4bit",
+    "acceptedEpoch": 5,
+    "clockSkewAllowanceSeconds": 30,
+    "seenRequestIds": [],
+    "seenRequestNonces": []
+  },
+  "valid": {
+    "claims": {
+      "contractVersion": "1",
+      "credentialId": "credential-01",
+      "issuer": "saturn-control",
+      "audience": "saturn-node:saturn-node-01",
+      "workloadId": "agent-workload-01",
+      "deploymentId": "deployment-01",
+      "nodeId": "saturn-node-01",
+      "modelId": "qwen3-8b-4bit",
+      "maximumContextTokens": 8192,
+      "maximumOutputTokens": 512,
+      "maximumConcurrentRequests": 1,
+      "requestBudget": 20,
+      "tokenBudget": 100000,
+      "issuedAt": "2030-01-01T00:00:00Z",
+      "notBefore": "2030-01-01T00:00:00Z",
+      "expiresAt": "2030-01-01T00:30:00Z",
+      "epoch": 5,
+      "policyReference": "policy-local-inference-v1",
+      "approvalReference": "approval-agent-session-01"
+    },
+    "capabilities": {
+      "contractVersion": "1",
+      "nodeId": "saturn-node-01",
+      "serviceVersion": "0.1.0",
+      "state": "available",
+      "models": [
+        {
+          "modelId": "qwen3-8b-4bit",
+          "maximumContextTokens": 8192,
+          "maximumOutputTokens": 512
+        }
+      ],
+      "maximumConcurrentRequests": 1,
+      "acceptedCredentialEpoch": 5
+    },
+    "request": {
+      "contractVersion": "1",
+      "requestId": "11111111-1111-4111-8111-111111111111",
+      "requestNonce": "nonce_0123456789abcdef",
+      "workloadId": "agent-workload-01",
+      "deploymentId": "deployment-01",
+      "modelId": "qwen3-8b-4bit",
+      "inputText": "Summarize the approved local task context.",
+      "maximumContextTokens": 8192,
+      "maximumOutputTokens": 512,
+      "deadlineAt": "2030-01-01T00:10:00Z"
+    },
+    "usageEvidence": {
+      "contractVersion": "1",
+      "requestId": "11111111-1111-4111-8111-111111111111",
+      "workloadId": "agent-workload-01",
+      "deploymentId": "deployment-01",
+      "nodeId": "saturn-node-01",
+      "modelId": "qwen3-8b-4bit",
+      "startedAt": "2030-01-01T00:05:00Z",
+      "completedAt": "2030-01-01T00:05:02Z",
+      "inputTokens": 8,
+      "outputTokens": 4,
+      "outcome": "completed",
+      "policyReference": "policy-local-inference-v1",
+      "approvalReference": "approval-agent-session-01"
+    },
+    "cancellationResponse": {
+      "contractVersion": "1",
+      "requestId": "11111111-1111-4111-8111-111111111111",
+      "state": "cancellation_requested"
+    },
+    "problem": {
+      "type": "urn:evocortex:saturn-node:problem:node-saturated",
+      "title": "Saturn-Node is saturated",
+      "status": 503,
+      "code": "node_saturated",
+      "requestId": "11111111-1111-4111-8111-111111111111",
+      "detail": "The bounded concurrency limit is currently reached.",
+      "retryAfterSeconds": 5
+    }
+  },
+  "invalidCases": [
+    {
+      "name": "request-unknown-field",
+      "target": "request",
+      "changes": {
+        "unexpected": true
+      },
+      "expectedCode": "malformed_request"
+    },
+    {
+      "name": "request-unsupported-version",
+      "target": "request",
+      "changes": {
+        "contractVersion": "2"
+      },
+      "expectedCode": "contract_version_unsupported"
+    },
+    {
+      "name": "request-empty-input",
+      "target": "request",
+      "changes": {
+        "inputText": ""
+      },
+      "expectedCode": "malformed_request"
+    },
+    {
+      "name": "request-output-exceeds-context",
+      "target": "request",
+      "changes": {
+        "maximumContextTokens": 256,
+        "maximumOutputTokens": 512
+      },
+      "expectedCode": "request_limit_exceeded"
+    },
+    {
+      "name": "request-deadline-expired",
+      "target": "request",
+      "changes": {
+        "deadlineAt": "2029-12-31T23:59:59Z"
+      },
+      "expectedCode": "request_timeout"
+    },
+    {
+      "name": "credential-wrong-issuer",
+      "target": "claims",
+      "changes": {
+        "issuer": "untrusted-issuer"
+      },
+      "expectedCode": "unauthenticated"
+    },
+    {
+      "name": "credential-wrong-audience",
+      "target": "claims",
+      "changes": {
+        "audience": "saturn-node:other-node"
+      },
+      "expectedCode": "wrong_audience"
+    },
+    {
+      "name": "credential-wrong-workload",
+      "target": "claims",
+      "changes": {
+        "workloadId": "other-workload"
+      },
+      "expectedCode": "wrong_workload"
+    },
+    {
+      "name": "credential-wrong-deployment",
+      "target": "claims",
+      "changes": {
+        "deploymentId": "other-deployment"
+      },
+      "expectedCode": "wrong_deployment"
+    },
+    {
+      "name": "credential-wrong-node",
+      "target": "claims",
+      "changes": {
+        "nodeId": "other-node",
+        "audience": "saturn-node:other-node"
+      },
+      "expectedCode": "wrong_node"
+    },
+    {
+      "name": "credential-model-not-allowed",
+      "target": "claims",
+      "changes": {
+        "modelId": "other-model"
+      },
+      "expectedCode": "model_not_allowed"
+    },
+    {
+      "name": "credential-not-yet-valid",
+      "target": "claims",
+      "changes": {
+        "notBefore": "2030-01-01T01:00:00Z"
+      },
+      "expectedCode": "credential_not_yet_valid"
+    },
+    {
+      "name": "credential-expired",
+      "target": "claims",
+      "changes": {
+        "expiresAt": "2030-01-01T00:04:00Z"
+      },
+      "expectedCode": "credential_expired"
+    },
+    {
+      "name": "credential-stale-epoch",
+      "target": "claims",
+      "changes": {
+        "epoch": 4
+      },
+      "expectedCode": "stale_credential_epoch"
+    },
+    {
+      "name": "credential-request-budget-exhausted",
+      "target": "claims",
+      "changes": {
+        "requestBudget": 0
+      },
+      "expectedCode": "request_limit_exceeded"
+    },
+    {
+      "name": "credential-token-budget-insufficient",
+      "target": "claims",
+      "changes": {
+        "tokenBudget": 100
+      },
+      "expectedCode": "token_budget_exceeded"
+    },
+    {
+      "name": "request-id-replayed",
+      "target": "context",
+      "changes": {
+        "seenRequestIds": [
+          "11111111-1111-4111-8111-111111111111"
+        ]
+      },
+      "expectedCode": "credential_replayed"
+    },
+    {
+      "name": "request-nonce-replayed",
+      "target": "context",
+      "changes": {
+        "seenRequestNonces": [
+          "nonce_0123456789abcdef"
+        ]
+      },
+      "expectedCode": "credential_replayed"
+    }
+  ]
+}
