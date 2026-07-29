@@ -237,9 +237,11 @@ func fakeRuntimeStreamsDeterministically() async throws {
         try validator.accept(event)
     }
 
+    let activeRequests = await runtime.activeRequests()
+    let terminalRequests = await runtime.terminalRequests()
     #expect(events.map(\.type) == [.started, .delta, .delta, .usage, .completed])
-    #expect(await runtime.activeRequests().isEmpty)
-    #expect(await runtime.terminalRequests() == [fixtures.valid.request.requestID])
+    #expect(activeRequests.isEmpty)
+    #expect(terminalRequests == Set([fixtures.valid.request.requestID]))
 }
 
 @Test("Cancellation is terminal, idempotent, and leaves no active work")
@@ -271,27 +273,40 @@ func fakeRuntimeCancellation() async throws {
         try validator.accept(event)
     }
 
+    let activeRequests = await runtime.activeRequests()
+    let terminalRequests = await runtime.terminalRequests()
     #expect(events.map(\.type) == [.started, .cancelled])
-    #expect(await runtime.activeRequests().isEmpty)
-    #expect(await runtime.terminalRequests().contains(request.requestID))
+    #expect(activeRequests.isEmpty)
+    #expect(terminalRequests.contains(request.requestID))
 }
 
 @Test("Event sequence validator rejects events after terminal completion")
 func eventSequenceRejectsSecondTerminal() throws {
-    let id = try requestID("33333333-3333-4333-8333-333333333333")
-    let node = try self.id("saturn-node-01")
-    let model = try self.id("local-model")
+    let requestIdentifier = try requestID("33333333-3333-4333-8333-333333333333")
+    let node = try id("saturn-node-01")
+    let model = try id("local-model")
     var validator = SaturnNodeInferenceEventSequenceValidator()
 
     try validator.accept(
-        .started(requestID: id, sequence: 0, nodeID: node, modelID: model)
+        .started(
+            requestID: requestIdentifier,
+            sequence: 0,
+            nodeID: node,
+            modelID: model
+        )
     )
     try validator.accept(
-        .completed(requestID: id, sequence: 1, finishReason: .stop)
+        .completed(
+            requestID: requestIdentifier,
+            sequence: 1,
+            finishReason: .stop
+        )
     )
 
     #expect(throws: SaturnNodeError.requestAlreadyTerminal) {
-        try validator.accept(.cancelled(requestID: id, sequence: 2))
+        try validator.accept(
+            .cancelled(requestID: requestIdentifier, sequence: 2)
+        )
     }
 }
 
