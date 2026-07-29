@@ -14,6 +14,19 @@ public struct SaturnNodeInferenceRequest: Hashable, Codable, Sendable {
     public let maximumOutputTokens: Int
     public let deadlineAt: Date
 
+    private enum CodingKeys: String, CodingKey {
+        case contractVersion
+        case requestID = "requestId"
+        case requestNonce
+        case deploymentID = "deploymentId"
+        case workloadID = "workloadId"
+        case modelID = "modelId"
+        case inputText
+        case maximumContextTokens
+        case maximumOutputTokens
+        case deadlineAt
+    }
+
     public init(
         contractVersion: String = Self.supportedContractVersion,
         requestID: RequestIdentifier,
@@ -83,6 +96,12 @@ public struct SaturnNodeModelCapability: Hashable, Codable, Sendable {
     public let maximumContextTokens: Int
     public let maximumOutputTokens: Int
 
+    private enum CodingKeys: String, CodingKey {
+        case modelID = "modelId"
+        case maximumContextTokens
+        case maximumOutputTokens
+    }
+
     public init(
         modelID: ModelIdentifier,
         maximumContextTokens: Int,
@@ -99,6 +118,15 @@ public struct SaturnNodeModelCapability: Hashable, Codable, Sendable {
         self.maximumContextTokens = maximumContextTokens
         self.maximumOutputTokens = maximumOutputTokens
     }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        try self.init(
+            modelID: container.decode(ModelIdentifier.self, forKey: .modelID),
+            maximumContextTokens: container.decode(Int.self, forKey: .maximumContextTokens),
+            maximumOutputTokens: container.decode(Int.self, forKey: .maximumOutputTokens)
+        )
+    }
 }
 
 public struct SaturnNodeRuntimeCapabilities: Hashable, Codable, Sendable {
@@ -109,6 +137,16 @@ public struct SaturnNodeRuntimeCapabilities: Hashable, Codable, Sendable {
     public let models: [SaturnNodeModelCapability]
     public let maximumConcurrentRequests: Int
     public let acceptedCredentialEpoch: Int
+
+    private enum CodingKeys: String, CodingKey {
+        case contractVersion
+        case nodeID = "nodeId"
+        case serviceVersion
+        case state
+        case models
+        case maximumConcurrentRequests
+        case acceptedCredentialEpoch
+    }
 
     public init(
         contractVersion: String = SaturnNodeInferenceRequest.supportedContractVersion,
@@ -137,6 +175,19 @@ public struct SaturnNodeRuntimeCapabilities: Hashable, Codable, Sendable {
         self.models = models
         self.maximumConcurrentRequests = maximumConcurrentRequests
         self.acceptedCredentialEpoch = acceptedCredentialEpoch
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        try self.init(
+            contractVersion: container.decode(String.self, forKey: .contractVersion),
+            nodeID: container.decode(SaturnNodeIdentifier.self, forKey: .nodeID),
+            serviceVersion: container.decode(String.self, forKey: .serviceVersion),
+            state: container.decode(SaturnNodeRuntimeState.self, forKey: .state),
+            models: container.decode([SaturnNodeModelCapability].self, forKey: .models),
+            maximumConcurrentRequests: container.decode(Int.self, forKey: .maximumConcurrentRequests),
+            acceptedCredentialEpoch: container.decode(Int.self, forKey: .acceptedCredentialEpoch)
+        )
     }
 
     public var modelIDs: [ModelIdentifier] {
@@ -296,6 +347,22 @@ public struct SaturnNodeUsageEvidence: Hashable, Codable, Sendable {
     public let policyReference: String?
     public let approvalReference: String?
 
+    private enum CodingKeys: String, CodingKey {
+        case contractVersion
+        case requestID = "requestId"
+        case workloadID = "workloadId"
+        case deploymentID = "deploymentId"
+        case nodeID = "nodeId"
+        case modelID = "modelId"
+        case startedAt
+        case completedAt
+        case inputTokens
+        case outputTokens
+        case outcome
+        case policyReference
+        case approvalReference
+    }
+
     public init(
         contractVersion: String = SaturnNodeInferenceRequest.supportedContractVersion,
         requestID: RequestIdentifier,
@@ -333,6 +400,25 @@ public struct SaturnNodeUsageEvidence: Hashable, Codable, Sendable {
         self.policyReference = policyReference
         self.approvalReference = approvalReference
     }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        try self.init(
+            contractVersion: container.decode(String.self, forKey: .contractVersion),
+            requestID: container.decode(RequestIdentifier.self, forKey: .requestID),
+            workloadID: container.decode(WorkloadIdentifier.self, forKey: .workloadID),
+            deploymentID: container.decode(DeploymentIdentifier.self, forKey: .deploymentID),
+            nodeID: container.decode(SaturnNodeIdentifier.self, forKey: .nodeID),
+            modelID: container.decode(ModelIdentifier.self, forKey: .modelID),
+            startedAt: container.decode(Date.self, forKey: .startedAt),
+            completedAt: container.decode(Date.self, forKey: .completedAt),
+            inputTokens: container.decode(Int.self, forKey: .inputTokens),
+            outputTokens: container.decode(Int.self, forKey: .outputTokens),
+            outcome: container.decode(SaturnNodeUsageOutcome.self, forKey: .outcome),
+            policyReference: container.decodeIfPresent(String.self, forKey: .policyReference),
+            approvalReference: container.decodeIfPresent(String.self, forKey: .approvalReference)
+        )
+    }
 }
 
 public enum SaturnNodeUsageOutcome: String, Codable, Hashable, Sendable {
@@ -351,6 +437,12 @@ public struct SaturnNodeCancellationResponse: Hashable, Codable, Sendable {
     public let requestID: RequestIdentifier
     public let state: SaturnNodeCancellationState
 
+    private enum CodingKeys: String, CodingKey {
+        case contractVersion
+        case requestID = "requestId"
+        case state
+    }
+
     public init(
         contractVersion: String = SaturnNodeInferenceRequest.supportedContractVersion,
         requestID: RequestIdentifier,
@@ -362,6 +454,15 @@ public struct SaturnNodeCancellationResponse: Hashable, Codable, Sendable {
         self.contractVersion = contractVersion
         self.requestID = requestID
         self.state = state
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        try self.init(
+            contractVersion: container.decode(String.self, forKey: .contractVersion),
+            requestID: container.decode(RequestIdentifier.self, forKey: .requestID),
+            state: container.decode(SaturnNodeCancellationState.self, forKey: .state)
+        )
     }
 }
 
