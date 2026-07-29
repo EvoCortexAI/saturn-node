@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "nodeID": "saturn-node-example",
+  "runtime": {
+    "name": "runtime-not-selected",
+    "revision": "pin-before-deployment"
+  },
+  "models": [
+    {
+      "id": "model-not-selected",
+      "artifact": "local/model-artifact-placeholder",
+      "revision": "pin-before-deployment",
+      "maximumContextTokens": 4096,
+      "maximumOutputTokens": 1024
+    }
+  ]
+}
