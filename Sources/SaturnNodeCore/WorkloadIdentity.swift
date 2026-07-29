@@ -24,6 +24,28 @@ public struct WorkloadComputeClaims: Hashable, Codable, Sendable {
     public let policyReference: String?
     public let approvalReference: String?
 
+    private enum CodingKeys: String, CodingKey {
+        case contractVersion
+        case credentialID = "credentialId"
+        case issuer
+        case audience
+        case workloadID = "workloadId"
+        case deploymentID = "deploymentId"
+        case nodeID = "nodeId"
+        case modelID = "modelId"
+        case maximumContextTokens
+        case maximumOutputTokens
+        case maximumConcurrentRequests
+        case requestBudget
+        case tokenBudget
+        case issuedAt
+        case notBefore
+        case expiresAt
+        case epoch
+        case policyReference
+        case approvalReference
+    }
+
     public init(
         contractVersion: String = Self.supportedContractVersion,
         credentialID: CredentialIdentifier,
@@ -85,6 +107,31 @@ public struct WorkloadComputeClaims: Hashable, Codable, Sendable {
         self.epoch = epoch
         self.policyReference = policyReference
         self.approvalReference = approvalReference
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        try self.init(
+            contractVersion: container.decode(String.self, forKey: .contractVersion),
+            credentialID: container.decode(CredentialIdentifier.self, forKey: .credentialID),
+            issuer: container.decode(String.self, forKey: .issuer),
+            audience: container.decode(String.self, forKey: .audience),
+            workloadID: container.decode(WorkloadIdentifier.self, forKey: .workloadID),
+            deploymentID: container.decode(DeploymentIdentifier.self, forKey: .deploymentID),
+            nodeID: container.decode(SaturnNodeIdentifier.self, forKey: .nodeID),
+            modelID: container.decode(ModelIdentifier.self, forKey: .modelID),
+            maximumContextTokens: container.decode(Int.self, forKey: .maximumContextTokens),
+            maximumOutputTokens: container.decode(Int.self, forKey: .maximumOutputTokens),
+            maximumConcurrentRequests: container.decode(Int.self, forKey: .maximumConcurrentRequests),
+            requestBudget: container.decode(Int.self, forKey: .requestBudget),
+            tokenBudget: container.decode(Int.self, forKey: .tokenBudget),
+            issuedAt: container.decode(Date.self, forKey: .issuedAt),
+            notBefore: container.decode(Date.self, forKey: .notBefore),
+            expiresAt: container.decode(Date.self, forKey: .expiresAt),
+            epoch: container.decode(Int.self, forKey: .epoch),
+            policyReference: container.decodeIfPresent(String.self, forKey: .policyReference),
+            approvalReference: container.decodeIfPresent(String.self, forKey: .approvalReference)
+        )
     }
 
     public static func audience(for nodeID: SaturnNodeIdentifier) -> String {
