@@ -10,6 +10,23 @@ public struct SaturnNodeIdentifier: RawRepresentable, Hashable, Codable, Sendabl
 
     public var description: String { rawValue }
 
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let rawValue = try container.decode(String.self)
+        guard let value = Self(rawValue: rawValue) else {
+            throw DecodingError.dataCorruptedError(
+                in: container,
+                debugDescription: "Identifier does not satisfy the Saturn contract."
+            )
+        }
+        self = value
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
+    }
+
     private static func isValid(_ value: String) -> Bool {
         guard !value.isEmpty, value.count <= 128 else { return false }
         guard let first = value.unicodeScalars.first,
@@ -71,6 +88,23 @@ public struct RequestNonce: RawRepresentable, Hashable, Codable, Sendable, Custo
     }
 
     public var description: String { rawValue }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let rawValue = try container.decode(String.self)
+        guard let value = Self(rawValue: rawValue) else {
+            throw DecodingError.dataCorruptedError(
+                in: container,
+                debugDescription: "Request nonce does not satisfy the Saturn contract."
+            )
+        }
+        self = value
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
+    }
 }
 
 public typealias WorkloadIdentifier = SaturnNodeIdentifier
