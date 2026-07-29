@@ -185,7 +185,7 @@
       "name": "credential-not-yet-valid",
       "target": "claims",
       "changes": {
-        "notBefore": "2030-01-01T01:00:00Z"
+        "notBefore": "2030-01-01T00:20:00Z"
       },
       "expectedCode": "credential_not_yet_valid"
     },
