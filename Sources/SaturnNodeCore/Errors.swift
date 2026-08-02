@@ -53,6 +53,14 @@ public enum SaturnNodeError: Error, Hashable, Sendable {
     case requestTimedOut
     case cancelled
     case requestAlreadyTerminal
+    // Composition / service seams
+    case invalidServiceConfiguration(String)
+    case identityUnavailable
+    case revocationStateUnavailable
+    case replayProtectionUnavailable
+    case modelAllowlistUnavailable
+    case admissionUnavailable
+    case serviceDraining
 
     public var problemCode: SaturnNodeProblemCode {
         switch self {
@@ -66,11 +74,17 @@ public enum SaturnNodeError: Error, Hashable, Sendable {
              .invalidCredentialClaims,
              .emptyPrompt,
              .invalidOutputLimit,
-             .invalidRuntimeCapabilities:
+             .invalidRuntimeCapabilities,
+             .invalidServiceConfiguration:
             .malformedRequest
         case .credentialVerificationUnavailable,
              .runtimeUnavailable,
-             .requestAlreadyTerminal:
+             .requestAlreadyTerminal,
+             .identityUnavailable,
+             .revocationStateUnavailable,
+             .replayProtectionUnavailable,
+             .modelAllowlistUnavailable,
+             .admissionUnavailable:
             .internalFailure
         case .unauthenticated:
             .unauthenticated
@@ -101,7 +115,8 @@ public enum SaturnNodeError: Error, Hashable, Sendable {
             .requestLimitExceeded
         case .tokenBudgetExceeded:
             .tokenBudgetExceeded
-        case .nodeSaturated:
+        case .nodeSaturated,
+             .serviceDraining:
             .nodeSaturated
         case .requestTimedOut:
             .requestTimeout
