@@ -233,8 +233,9 @@ public struct SaturnNodeServiceComposition: Sendable {
 
     /// Fail-closed factory used by the production executable and by default tests.
     public static func unavailable() throws -> SaturnNodeServiceComposition {
-        // Configuration still validates; identity and all other deps are unavailable.
-        let placeholderNode = try #require(SaturnNodeIdentifier(rawValue: "unavailable-node"))
+        guard let placeholderNode = SaturnNodeIdentifier(rawValue: "unavailable-node") else {
+            throw SaturnNodeError.invalidServiceConfiguration("placeholder node identity")
+        }
         let configuration = try SaturnNodeServiceConfiguration(
             nodeID: placeholderNode,
             serviceVersion: "0.0.0-unavailable",
