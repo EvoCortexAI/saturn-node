@@ -54,13 +54,13 @@ private struct StaticClaimsVerifier: WorkloadCredentialVerifying {
 
 private func makeComposition(
     fixtures: ContractFixtures,
-    verifier: any WorkloadCredentialVerifying? = nil,
-    revocation: any RevocationStateProviding? = nil,
-    replay: any ReplayProtectionProviding? = nil,
-    allowlist: any ModelAllowlistProviding? = nil,
-    admission: any AdmissionControlling? = nil,
-    runtime: any SaturnNodeInferenceRuntime? = nil,
-    lifecycle: any ServiceLifecycleControlling? = nil
+    verifier: (any WorkloadCredentialVerifying)? = nil,
+    revocation: (any RevocationStateProviding)? = nil,
+    replay: (any ReplayProtectionProviding)? = nil,
+    allowlist: (any ModelAllowlistProviding)? = nil,
+    admission: (any AdmissionControlling)? = nil,
+    runtime: (any SaturnNodeInferenceRuntime)? = nil,
+    lifecycle: (any ServiceLifecycleControlling)? = nil
 ) async throws -> SaturnNodeServiceComposition {
     let claims = fixtures.valid.claims
     let configuration = try SaturnNodeServiceConfiguration(
