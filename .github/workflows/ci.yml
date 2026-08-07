@@ -15,12 +15,52 @@ concurrency:
 
 jobs:
   package:
-    runs-on: macos-26
+    if: >-
+      github.event_name == 'push' ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: [self-hosted, macOS, ARM64, apple-ci, xcode-26-6]
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+
+      - name: Verify self-hosted runner and Apple toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          [[ "$RUNNER_OS" == "macOS" ]] || {
+            echo "Expected RUNNER_OS=macOS, got: $RUNNER_OS"
+            exit 1
+          }
+          [[ "$RUNNER_ARCH" == "ARM64" ]] || {
+            echo "Expected RUNNER_ARCH=ARM64, got: $RUNNER_ARCH"
+            exit 1
+          }
+
+          xcode_version="$(xcodebuild -version | sed -n '1s/^Xcode //p')"
+          [[ "$xcode_version" == "26.6" ]] || {
+            echo "Expected Xcode 26.6, got: ${xcode_version:-unknown}"
+            xcodebuild -version
+            exit 1
+          }
+
+          hostname
+          sw_vers
+          xcode-select -p
+          xcodebuild -version
+          swift --version
+
+      - name: Verify checkout is initially clean
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -z "$(git status --porcelain=v1 --untracked-files=all)"
+
       - name: Show toolchain
         run: |
           xcodebuild -version
@@ -34,3 +74,22 @@ jobs:
         run: swift test --parallel
       - name: Verify fail-closed executable
         run: swift run saturn-node
+
+      - name: Clean checked-out workspace
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          xcrun simctl shutdown all 2>/dev/null || true
+
+          workspace="$(cd "$GITHUB_WORKSPACE" && pwd -P)"
+          repository_root="$(git rev-parse --show-toplevel)"
+          [[ "$workspace" == "$repository_root" ]] || {
+            echo "Refusing cleanup outside the checked-out repository"
+            exit 1
+          }
+
+          git reset --hard HEAD
+          git clean -ffdx
+          test -z "$(git status --porcelain=v1 --untracked-files=all)"
