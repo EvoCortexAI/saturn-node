@@ -1,10 +1,10 @@
-// swift-tools-version: 6.0
+// swift-tools-version: 6.3
 
 import PackageDescription
 
 let package = Package(
     name: "SaturnNode",
-    platforms: [.macOS("26.0")],
+    platforms: [.macOS(.v26)],
     products: [
         .library(name: "SaturnNodeCore", targets: ["SaturnNodeCore"]),
         .executable(name: "saturn-node", targets: ["saturn-node"])
