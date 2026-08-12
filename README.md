@@ -6,21 +6,72 @@
 
 Saturn-Node is the private, workload-authenticated MLX inference service in the Saturn execution plane.
 
-```text
-Saturn One or Saturn Container
-    -> Saturn-Control
-    -> managed agent container
-    -> Saturn-Node
-    -> saturn-mlx-mesh / MLX
+## Canonical runtime path
+
+```mermaid
+flowchart LR
+    One[Saturn One]
+    Container[Saturn Container]
+    Control[Saturn-Control]
+    Agent[Managed Agent Container]
+    Node[Saturn-Node]
+    Mesh[saturn-mlx-mesh]
+    MLX[MLX model]
+
+    One -->|client API only| Control
+    Container -->|client API only| Control
+    Control -->|deployment + compute assignment| Agent
+    Agent -->|short-lived workload-scoped compute authority| Node
+    Node --> Mesh --> MLX
+
+    One -. no direct access .-> Node
+    Container -. no direct access .-> Node
 ```
 
-Frontends never call Saturn-Node directly. Saturn-Control assigns compute and issues short-lived, deployment-scoped credentials to an authorized agent workload.
+Frontends never call Saturn-Node directly. Saturn-Control assigns compute and issues short-lived, deployment-scoped authority to an authorized agent workload.
+
+## Enforcement boundary
+
+```mermaid
+flowchart TB
+    Request[Inference request]
+    Identity[Workload identity]
+    Lease[Compute lease]
+    Receipt[Applicable bound authority]
+    Verify[Saturn-Node PEP]
+    Runtime[Native inference runtime]
+    Mesh[saturn-mlx-mesh]
+
+    Request --> Verify
+    Identity --> Verify
+    Lease --> Verify
+    Receipt --> Verify
+    Verify -->|valid + in scope| Runtime --> Mesh
+    Verify -->|invalid / expired / mismatched| Deny[Fail closed]
+```
+
+Saturn-Node verifies the exact workload, node, model, limits, budget, expiry/revocation, and applicable bound authority before MLX execution. It does not trust frontend approval state or agent self-assertions.
 
 ## Ownership
 
 Saturn-Node owns private workload-authenticated inference transport, credential verification and revocation state, model allowlisting, pinned manifests, streamed inference, cancellation, bounded resource limits, metadata-only usage evidence, and service recovery.
 
-It does not own Apple Container lifecycle, Saturn-Control orchestration, agent tools, frontend APIs, public exposure, distributed-mesh research, or canonical ethical principles.
+It does not own Apple Container lifecycle, Saturn-Control orchestration, agent tools, frontend APIs, public exposure, ACP parsing, distributed-mesh research, or canonical ethical principles.
+
+## Cancellation boundary
+
+```mermaid
+flowchart LR
+    Control[Saturn-Control task cancel]
+    Agent[Agent runtime]
+    Node[Saturn-Node cancellation]
+    Mesh[saturn-mlx-mesh native cancellation]
+    Quiescent[Zero active generation + bounded resource watermark]
+
+    Control --> Agent --> Node --> Mesh --> Quiescent
+```
+
+A client-visible `cancelled` state is insufficient. The service must eventually prove native termination, removal from active execution, request-owned resource reclamation, and successful subsequent inference on real Apple hardware.
 
 ## Current repository state
 
@@ -34,7 +85,7 @@ The repository contains:
 - a standard-library validator executed by CI;
 - non-secret example configuration and operations guidance.
 
-It does not provide a listener, cryptographic credential verifier, production runtime, model download, launchd service, firewall rule, or SN01 deployment.
+It does not provide a production listener, production cryptographic verifier, production runtime adapter, model installation, launchd service, firewall rule, or deployed SN01 service.
 
 ## Contract review
 
@@ -46,9 +97,7 @@ The proposed private compute contract is:
 - `docs/contracts/v1/fixtures.json`;
 - `docs/contracts/v1/stream.sse`.
 
-The architecture review gate remains `EvoCortexAI/saturn-control#3`. The contract is not operational until it is reviewed, merged, implemented by Saturn-Node, and consumed by deterministic Saturn-Control and agent-runtime tests.
-
-The semantic claims are independent of their future cryptographic envelope. This repository does not yet choose JWT, PASETO, macaroons, mTLS-only identity, or a custom signed envelope.
+The semantic claims are independent of their cryptographic envelope. The canonical Saturn authority/receipt contract must remain separately versioned and shared by its issuer/verifiers rather than reimplemented as Node-local lookalike structs.
 
 ## Verification
 
@@ -59,17 +108,18 @@ swift test
 swift run saturn-node
 ```
 
-The executable intentionally reports that no listener or inference runtime is configured.
+The executable intentionally reports that no production listener or inference runtime is configured.
 
 ## Next gates
 
-1. Review and merge the workload compute contract and fixtures.
-2. Update Swift types and tests to consume the frozen v1 fixtures.
-3. Select the credential presentation and verification mechanism through security review.
+1. Freeze the canonical workload/compute contract and compatible authority binding.
+2. Update Swift types and tests to consume frozen fixtures.
+3. Add production credential/authority verification after security review.
 4. Add deterministic fake-runtime streaming and cancellation tests.
-5. Add a narrow `saturn-mlx-mesh` adapter.
-6. Add private transport.
-7. Request explicit approval before launchd, firewall, credentials, model installation, or SN01 deployment.
+5. Add the narrow `saturn-mlx-mesh` adapter.
+6. Add private transport and health/recovery behavior.
+7. Prove cancellation/resource reclamation on the pinned Apple hardware/model/runtime tuple.
+8. Request explicit approval before launchd, firewall, credentials, model installation, or SN01 deployment.
 
 ## License
 
