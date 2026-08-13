@@ -14,13 +14,21 @@ let package = Package(
         .package(
             url: "https://github.com/EvoCortexAI/evo-ethics-framework.git",
             branch: "main"
+        ),
+        // Narrow simulation-backed adapter surface only.
+        // Pinned to mesh main after ConformanceIsolation fix (nonisolated generate).
+        // Real-hardware MeshModel path and G3 reclamation remain blocked on mesh#1.
+        .package(
+            url: "https://github.com/EvoCortexAI/saturn-mlx-mesh.git",
+            revision: "779dd871ab386ed50b47e2e2c994a16ae2d8d1db"
         )
     ],
     targets: [
         .target(
             name: "SaturnNodeCore",
             dependencies: [
-                .product(name: "SaturnAuthority", package: "evo-ethics-framework")
+                .product(name: "SaturnAuthority", package: "evo-ethics-framework"),
+                .product(name: "SaturnMLXMesh", package: "saturn-mlx-mesh")
             ]
         ),
         .executableTarget(
@@ -31,7 +39,8 @@ let package = Package(
             name: "SaturnNodeCoreTests",
             dependencies: [
                 "SaturnNodeCore",
-                .product(name: "SaturnAuthority", package: "evo-ethics-framework")
+                .product(name: "SaturnAuthority", package: "evo-ethics-framework"),
+                .product(name: "SaturnMLXMesh", package: "saturn-mlx-mesh")
             ]
         )
     ]

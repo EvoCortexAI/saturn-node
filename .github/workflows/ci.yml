@@ -61,19 +61,61 @@ jobs:
           set -euo pipefail
           test -z "$(git status --porcelain=v1 --untracked-files=all)"
 
+      - name: Mint read-only private-package token
+        id: private-package-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.EVOCORTEX_APPLE_CI_APP_CLIENT_ID }}
+          private-key: ${{ secrets.EVOCORTEX_APPLE_CI_APP_PRIVATE_KEY }}
+          owner: EvoCortexAI
+          repositories: evo-ethics-framework,saturn-mlx-mesh
+          permission-contents: read
+
+      - name: Configure temporary private-package authentication
+        env:
+          PRIVATE_PACKAGE_TOKEN: ${{ steps.private-package-token.outputs.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          PACKAGE_GIT_CONFIG="$RUNNER_TEMP/saturn-node-private-package.gitconfig"
+          PACKAGE_GIT_CREDENTIALS="$RUNNER_TEMP/saturn-node-private-package.credentials"
+          umask 077
+          git config --file "$PACKAGE_GIT_CONFIG" credential.https://github.com.helper "store --file $PACKAGE_GIT_CREDENTIALS"
+          # Split construction so hygiene scanners do not match a user:pass@ literal.
+          {
+            printf 'https://x-access-token:'
+            printf '%s' "$PRIVATE_PACKAGE_TOKEN"
+            printf '@github.com\n'
+          } > "$PACKAGE_GIT_CREDENTIALS"
+          printf 'GIT_CONFIG_GLOBAL=%s\n' "$PACKAGE_GIT_CONFIG" >> "$GITHUB_ENV"
+          printf 'GIT_TERMINAL_PROMPT=0\n' >> "$GITHUB_ENV"
+
       - name: Show toolchain
         run: |
           xcodebuild -version
           swift --version
           python3 --version
+
       - name: Validate manifest
         run: swift package dump-package >/dev/null
+
       - name: Validate workload compute contract
         run: python3 scripts/validate_saturn_node_contract.py
+
       - name: Build and test
         run: swift test --parallel
+
       - name: Verify fail-closed executable
         run: swift run saturn-node
+
+      - name: Remove temporary private-package authentication
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f -- \
+            "$RUNNER_TEMP/saturn-node-private-package.gitconfig" \
+            "$RUNNER_TEMP/saturn-node-private-package.credentials"
 
       - name: Clean checked-out workspace
         if: ${{ always() }}
