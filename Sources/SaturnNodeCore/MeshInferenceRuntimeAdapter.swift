@@ -138,9 +138,7 @@ public actor MeshInferenceRuntimeAdapter: SaturnNodeInferenceRuntime {
 
         switch chunk {
         case let .started(meshRequestID):
-            guard meshRequestID.rawValue == request.requestID.rawValue else {
-                throw SaturnNodeError.malformedRequest("Mesh started request ID mismatch.")
-            }
+            try requireMatchingRequestID(meshRequestID, expected: request.requestID, context: "started")
             return .started(
                 requestID: request.requestID,
                 sequence: sequence,
@@ -149,9 +147,7 @@ public actor MeshInferenceRuntimeAdapter: SaturnNodeInferenceRuntime {
             )
 
         case let .delta(meshRequestID, text, _):
-            guard meshRequestID.rawValue == request.requestID.rawValue else {
-                throw SaturnNodeError.malformedRequest("Mesh delta request ID mismatch.")
-            }
+            try requireMatchingRequestID(meshRequestID, expected: request.requestID, context: "delta")
             guard !text.isEmpty else {
                 throw SaturnNodeError.malformedRequest("Mesh delta text must not be empty.")
             }
@@ -162,30 +158,38 @@ public actor MeshInferenceRuntimeAdapter: SaturnNodeInferenceRuntime {
             )
 
         case let .completed(meshRequestID, finishReason):
-            guard meshRequestID.rawValue == request.requestID.rawValue else {
-                throw SaturnNodeError.malformedRequest("Mesh completed request ID mismatch.")
-            }
-            let reason: SaturnNodeInferenceFinishReason
+            try requireMatchingRequestID(meshRequestID, expected: request.requestID, context: "completed")
             switch finishReason {
             case .stop:
-                reason = .stop
+                return .completed(
+                    requestID: request.requestID,
+                    sequence: sequence,
+                    finishReason: .stop
+                )
             case .length:
-                reason = .length
+                return .completed(
+                    requestID: request.requestID,
+                    sequence: sequence,
+                    finishReason: .length
+                )
             case .cancelled:
                 // Mesh should not emit completed with cancelled; treat as cancel path.
                 return .cancelled(requestID: request.requestID, sequence: sequence)
             }
-            return .completed(
-                requestID: request.requestID,
-                sequence: sequence,
-                finishReason: reason
-            )
 
         case let .cancelled(meshRequestID):
-            guard meshRequestID.rawValue == request.requestID.rawValue else {
-                throw SaturnNodeError.malformedRequest("Mesh cancelled request ID mismatch.")
-            }
+            try requireMatchingRequestID(meshRequestID, expected: request.requestID, context: "cancelled")
             return .cancelled(requestID: request.requestID, sequence: sequence)
+        }
+    }
+
+    private func requireMatchingRequestID(
+        _ meshRequestID: InferenceRequestID,
+        expected: RequestIdentifier,
+        context: String
+    ) throws {
+        guard meshRequestID.rawValue == expected.rawValue else {
+            throw SaturnNodeError.malformedRequest("Mesh \(context) request ID mismatch.")
         }
     }
 
