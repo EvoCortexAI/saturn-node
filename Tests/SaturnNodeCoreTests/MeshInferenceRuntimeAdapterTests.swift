@@ -140,7 +140,7 @@ func cancelThenSubsequentRequest() async throws {
 
     // Drain remaining events (may already be terminal).
     for try await _ in stream {}
-    _ = await collector.value
+    _ = try await collector.value
 
     // Second request must succeed after cleanup.
     let second = try makeRequest(
