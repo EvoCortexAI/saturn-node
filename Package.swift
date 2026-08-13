@@ -15,11 +15,12 @@ let package = Package(
             url: "https://github.com/EvoCortexAI/evo-ethics-framework.git",
             branch: "main"
         ),
-        // Narrow simulation-backed adapter surface only (saturn-mlx-mesh PR #5).
+        // Narrow simulation-backed adapter surface only.
+        // Pinned to mesh main after ConformanceIsolation fix (nonisolated generate).
         // Real-hardware MeshModel path and G3 reclamation remain blocked on mesh#1.
         .package(
             url: "https://github.com/EvoCortexAI/saturn-mlx-mesh.git",
-            revision: "86f6e59f623c3102ca618c3c300f1f679e49e029"
+            revision: "779dd871ab386ed50b47e2e2c994a16ae2d8d1db"
         )
     ],
     targets: [
