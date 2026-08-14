@@ -45,8 +45,10 @@ struct SaturnNodeBootstrap {
                 acceptedCredentialEpoch: 0
             )
 
-            guard let requestID = RequestIdentifier(rawValue: "smoke-\(UUID().uuidString)"),
-                  let nonce = RequestNonce(rawValue: UUID().uuidString),
+            let requestID = RequestIdentifier(UUID())
+            // Nonce: 32 hex chars, no hyphens (allowed charset: alnum + _-).
+            let nonceRaw = UUID().uuidString.replacingOccurrences(of: "-", with: "")
+            guard let nonce = RequestNonce(rawValue: nonceRaw),
                   let deploymentID = DeploymentIdentifier(rawValue: "local-smoke"),
                   let workloadID = WorkloadIdentifier(rawValue: "local-smoke"),
                   let modelID = ModelIdentifier(rawValue: AcceptanceModelPin.primaryModelID) else {
