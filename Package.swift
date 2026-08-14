@@ -15,12 +15,11 @@ let package = Package(
             url: "https://github.com/EvoCortexAI/evo-ethics-framework.git",
             branch: "main"
         ),
-        // Real MLXInferenceRuntime (MeshModelInferenceRuntime) + AcceptanceModelPin.
-        // Pin tip of agent/real-mesh-model-inference-runtime until that PR merges to main;
-        // then bump to the merge commit SHA.
+        // Mesh: real MeshModelInferenceRuntime + AcceptanceModelPin + sim for CI.
+        // Pin mesh main after PR #11 merge.
         .package(
             url: "https://github.com/EvoCortexAI/saturn-mlx-mesh.git",
-            revision: "c91f5965f5d4640a48d9b9f1834550fae61b1a3a"
+            revision: "0d1e382b9b41c280bb7809133e380111804d0f2b"
         )
     ],
     targets: [
