@@ -83,9 +83,22 @@ The repository contains:
 - a proposed workload compute contract under `docs/contracts/v1/`;
 - strict JSON fixtures and a fragmented-SSE fixture;
 - a standard-library validator executed by CI;
+- narrow simulation-backed `MeshInferenceRuntimeAdapter` (not selected by default composition);
 - non-secret example configuration and operations guidance.
 
-It does not provide a production listener, production cryptographic verifier, production runtime adapter, model installation, launchd service, firewall rule, or deployed SN01 service.
+It does not provide a production listener, production cryptographic verifier, production runtime adapter selection, model installation, launchd service, firewall rule, or deployed SN01 service.
+
+## KF / mesh#1 model pin
+
+Primary allowlist candidate aligned with mesh `AcceptanceModelPin`:
+
+| Field | Value |
+|-------|--------|
+| Model ID | `mlx-community/Qwen3-8B-4bit` |
+| Example manifest | `config/model-manifest.example.json` |
+| Mesh procedure | `saturn-mlx-mesh` → `Docs/ACCEPTANCE-MODEL.md` |
+
+**32B is not the primary KF path.** Default composition remains `UnavailableInferenceRuntime`. Real runtime opt-in is Founder-gated after mesh#1 evidence is recorded.
 
 ## Contract review
 
@@ -115,10 +128,10 @@ The executable intentionally reports that no production listener or inference ru
 1. Freeze the canonical workload/compute contract and compatible authority binding.
 2. Update Swift types and tests to consume frozen fixtures.
 3. Add production credential/authority verification after security review.
-4. Add deterministic fake-runtime streaming and cancellation tests.
-5. Add the narrow `saturn-mlx-mesh` adapter.
-6. Add private transport and health/recovery behavior.
-7. Prove cancellation/resource reclamation on the pinned Apple hardware/model/runtime tuple.
+4. Keep deterministic fake-runtime streaming and cancellation tests green.
+5. Record mesh#1 hardware evidence for `Qwen3-8B-4bit` (load, stream, cancel, restart).
+6. Opt-in real `MLXInferenceRuntime` composition only after Founder approval.
+7. Add private transport and health/recovery behavior.
 8. Request explicit approval before launchd, firewall, credentials, model installation, or SN01 deployment.
 
 ## License
