@@ -15,12 +15,12 @@ let package = Package(
             url: "https://github.com/EvoCortexAI/evo-ethics-framework.git",
             branch: "main"
         ),
-        // Narrow simulation-backed adapter surface only.
-        // Pinned to mesh main after ConformanceIsolation fix (nonisolated generate).
-        // Real-hardware MeshModel path and G3 reclamation remain blocked on mesh#1.
+        // Real MLXInferenceRuntime (MeshModelInferenceRuntime) + AcceptanceModelPin.
+        // Pin tip of agent/real-mesh-model-inference-runtime until that PR merges to main;
+        // then bump to the merge commit SHA.
         .package(
             url: "https://github.com/EvoCortexAI/saturn-mlx-mesh.git",
-            revision: "779dd871ab386ed50b47e2e2c994a16ae2d8d1db"
+            revision: "c91f5965f5d4640a48d9b9f1834550fae61b1a3a"
         )
     ],
     targets: [

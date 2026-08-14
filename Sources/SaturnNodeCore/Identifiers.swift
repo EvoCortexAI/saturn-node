@@ -33,7 +33,8 @@ public struct SaturnNodeIdentifier: RawRepresentable, Hashable, Codable, Sendabl
               CharacterSet.alphanumerics.contains(first) else {
             return false
         }
-        let allowed = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "._:-"))
+        // Include '/' so Hugging Face-style model ids (org/name) are valid ModelIdentifiers.
+        let allowed = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "._:-/"))
         return value.unicodeScalars.allSatisfy { allowed.contains($0) }
     }
 }
