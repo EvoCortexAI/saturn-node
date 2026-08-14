@@ -1,15 +1,15 @@
 import Foundation
 import SaturnMLXMesh
 
-/// Narrow, simulation-capable adapter from the stable `MLXInferenceRuntime`
-/// surface in `saturn-mlx-mesh` onto `SaturnNodeInferenceRuntime`.
+/// Maps the mesh `MLXInferenceRuntime` surface onto `SaturnNodeInferenceRuntime`.
 ///
-/// Production composition **must not** select this type until the real-hardware
-/// gates (mesh#1 + G3 resource baseline) are green and Founder approval is
-/// recorded. The ordinary executable path continues to use
-/// `UnavailableInferenceRuntime`.
+/// Runtime-agnostic: works with `SimulatedMLXInferenceRuntime` (CI) or
+/// `MeshModelInferenceRuntime` (real MLX). The adapter does not choose which.
 ///
-/// Responsibilities of this adapter:
+/// Default service composition still uses `UnavailableInferenceRuntime`.
+/// Opt-in live path: `swift run saturn-node --real-smoke` (Founder/hardware only).
+///
+/// Responsibilities:
 /// - map Saturn request / event types onto the mesh adapter contract
 /// - synthesize contiguous sequence numbers required by Saturn
 /// - map mesh errors onto `SaturnNodeError`
@@ -18,8 +18,8 @@ import SaturnMLXMesh
 /// It does **not**:
 /// - open listeners or perform networking
 /// - parse workload credentials or authority receipts
-/// - load real models or touch Metal
 /// - own admission, allowlist, or revocation policy
+/// - download weights (that is `MeshModelInferenceRuntime.loadPrimary`)
 public actor MeshInferenceRuntimeAdapter: SaturnNodeInferenceRuntime {
     private let mesh: any MLXInferenceRuntime
     private let nodeID: SaturnNodeIdentifier
@@ -173,7 +173,6 @@ public actor MeshInferenceRuntimeAdapter: SaturnNodeInferenceRuntime {
                     finishReason: .length
                 )
             case .cancelled:
-                // Mesh should not emit completed with cancelled; treat as cancel path.
                 return .cancelled(requestID: request.requestID, sequence: sequence)
             }
 
