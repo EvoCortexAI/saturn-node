@@ -7,11 +7,14 @@ import SaturnMLXMesh
 /// `MeshModelInferenceRuntime` (real MLX). The adapter does not choose which.
 ///
 /// Default service composition still uses `UnavailableInferenceRuntime`.
-/// Opt-in live path: `swift run saturn-node --real-smoke` (Founder/hardware only).
+/// Opt-in hardware path: `swift run saturn-node --real-smoke`.
 ///
 /// Responsibilities:
 /// - map Saturn request / event types onto the mesh adapter contract
 /// - synthesize contiguous sequence numbers required by Saturn
+/// - preserve sequence state through cancellation until the terminal event
+/// - reject already-expired requests before starting inference
+/// - propagate consumer cancellation into the mesh runtime
 /// - map mesh errors onto `SaturnNodeError`
 /// - keep prompt and generated text out of any telemetry path it owns
 ///
@@ -20,6 +23,7 @@ import SaturnMLXMesh
 /// - parse workload credentials or authority receipts
 /// - own admission, allowlist, or revocation policy
 /// - download weights (that is `MeshModelInferenceRuntime.loadPrimary`)
+/// - yet enforce an in-flight wall-clock deadline after generation has started
 public actor MeshInferenceRuntimeAdapter: SaturnNodeInferenceRuntime {
     private let mesh: any MLXInferenceRuntime
     private let nodeID: SaturnNodeIdentifier
@@ -58,14 +62,14 @@ public actor MeshInferenceRuntimeAdapter: SaturnNodeInferenceRuntime {
         }
 
         var models: [SaturnNodeModelCapability] = []
-        for m in meshCaps.models {
-            guard let modelID = ModelIdentifier(rawValue: m.modelID) else {
+        for model in meshCaps.models {
+            guard let modelID = ModelIdentifier(rawValue: model.modelID) else {
                 throw SaturnNodeError.invalidRuntimeCapabilities
             }
             let capability = try SaturnNodeModelCapability(
                 modelID: modelID,
-                maximumContextTokens: m.maxContextTokens,
-                maximumOutputTokens: m.maxOutputTokens
+                maximumContextTokens: model.maxContextTokens,
+                maximumOutputTokens: model.maxOutputTokens
             )
             models.append(capability)
         }
@@ -83,8 +87,13 @@ public actor MeshInferenceRuntimeAdapter: SaturnNodeInferenceRuntime {
     public func stream(
         request: SaturnNodeInferenceRequest
     ) async throws -> AsyncThrowingStream<SaturnNodeInferenceEvent, Error> {
+        guard request.deadlineAt > Date() else {
+            throw SaturnNodeError.requestTimedOut
+        }
+
+        let meshRequestID = InferenceRequestID(request.requestID.rawValue)
         let meshRequest = ValidatedInferenceRequest(
-            requestID: InferenceRequestID(request.requestID.rawValue),
+            requestID: meshRequestID,
             modelID: request.modelID.rawValue,
             prompt: request.inputText,
             maxOutputTokens: request.maximumOutputTokens
@@ -99,6 +108,7 @@ public actor MeshInferenceRuntimeAdapter: SaturnNodeInferenceRuntime {
                     continuation.finish(throwing: SaturnNodeError.runtimeUnavailable)
                     return
                 }
+
                 do {
                     for try await chunk in meshStream {
                         let event = try await self.mapChunk(chunk, for: request)
@@ -108,23 +118,37 @@ public actor MeshInferenceRuntimeAdapter: SaturnNodeInferenceRuntime {
                         }
                     }
                     continuation.finish()
+                } catch is CancellationError {
+                    // Consumer cancellation owns termination of the outer stream.
                 } catch let error as MeshInferenceError {
                     continuation.finish(throwing: Self.mapError(error))
                 } catch {
-                    continuation.finish(throwing: SaturnNodeError.malformedRequest(error.localizedDescription))
+                    continuation.finish(
+                        throwing: SaturnNodeError.malformedRequest(error.localizedDescription)
+                    )
                 }
+
                 await self.clearSequence(for: request.requestID)
             }
-            continuation.onTermination = { _ in
+
+            continuation.onTermination = { termination in
+                guard case .cancelled = termination else { return }
                 task.cancel()
-                Task { await self.clearSequence(for: request.requestID) }
+                Task { [weak self] in
+                    guard let self else { return }
+                    await self.consumerTerminated(
+                        requestID: request.requestID,
+                        meshRequestID: meshRequestID
+                    )
+                }
             }
         }
     }
 
     public func cancel(requestID: RequestIdentifier) async throws {
+        // Do not clear sequence state here. The mesh emits the cancellation
+        // terminal asynchronously, and that terminal must remain contiguous.
         await mesh.cancel(requestID: InferenceRequestID(requestID.rawValue))
-        nextSequence.removeValue(forKey: requestID)
     }
 
     // MARK: - Mapping
@@ -138,7 +162,11 @@ public actor MeshInferenceRuntimeAdapter: SaturnNodeInferenceRuntime {
 
         switch chunk {
         case let .started(meshRequestID):
-            try requireMatchingRequestID(meshRequestID, expected: request.requestID, context: "started")
+            try requireMatchingRequestID(
+                meshRequestID,
+                expected: request.requestID,
+                context: "started"
+            )
             return .started(
                 requestID: request.requestID,
                 sequence: sequence,
@@ -147,7 +175,11 @@ public actor MeshInferenceRuntimeAdapter: SaturnNodeInferenceRuntime {
             )
 
         case let .delta(meshRequestID, text, _):
-            try requireMatchingRequestID(meshRequestID, expected: request.requestID, context: "delta")
+            try requireMatchingRequestID(
+                meshRequestID,
+                expected: request.requestID,
+                context: "delta"
+            )
             guard !text.isEmpty else {
                 throw SaturnNodeError.malformedRequest("Mesh delta text must not be empty.")
             }
@@ -158,7 +190,11 @@ public actor MeshInferenceRuntimeAdapter: SaturnNodeInferenceRuntime {
             )
 
         case let .completed(meshRequestID, finishReason):
-            try requireMatchingRequestID(meshRequestID, expected: request.requestID, context: "completed")
+            try requireMatchingRequestID(
+                meshRequestID,
+                expected: request.requestID,
+                context: "completed"
+            )
             switch finishReason {
             case .stop:
                 return .completed(
@@ -177,7 +213,11 @@ public actor MeshInferenceRuntimeAdapter: SaturnNodeInferenceRuntime {
             }
 
         case let .cancelled(meshRequestID):
-            try requireMatchingRequestID(meshRequestID, expected: request.requestID, context: "cancelled")
+            try requireMatchingRequestID(
+                meshRequestID,
+                expected: request.requestID,
+                context: "cancelled"
+            )
             return .cancelled(requestID: request.requestID, sequence: sequence)
         }
     }
@@ -190,6 +230,14 @@ public actor MeshInferenceRuntimeAdapter: SaturnNodeInferenceRuntime {
         guard meshRequestID.rawValue == expected.rawValue else {
             throw SaturnNodeError.malformedRequest("Mesh \(context) request ID mismatch.")
         }
+    }
+
+    private func consumerTerminated(
+        requestID: RequestIdentifier,
+        meshRequestID: InferenceRequestID
+    ) async {
+        await mesh.cancel(requestID: meshRequestID)
+        clearSequence(for: requestID)
     }
 
     private func clearSequence(for requestID: RequestIdentifier) {

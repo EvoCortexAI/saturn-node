@@ -15,11 +15,11 @@ let package = Package(
             url: "https://github.com/EvoCortexAI/evo-ethics-framework.git",
             branch: "main"
         ),
-        // Mesh: real MeshModelInferenceRuntime + AcceptanceModelPin + sim for CI.
-        // Pin mesh main after PR #11 merge.
+        // Mesh: Swift 6.3 / platform 26 baseline, real MeshModelInferenceRuntime,
+        // hardware acceptance smoke, and deterministic simulation for CI.
         .package(
             url: "https://github.com/EvoCortexAI/saturn-mlx-mesh.git",
-            revision: "0d1e382b9b41c280bb7809133e380111804d0f2b"
+            revision: "8ce1d6f6d6f5304f526019a5b5bcbf3f2b2f783e"
         )
     ],
     targets: [
