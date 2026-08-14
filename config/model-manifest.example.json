@@ -2,15 +2,15 @@
   "schemaVersion": 1,
   "nodeID": "saturn-node-example",
   "runtime": {
-    "name": "runtime-not-selected",
-    "revision": "pin-before-deployment"
+    "name": "saturn-mlx-mesh",
+    "revision": "pin-after-mesh-acceptance"
   },
   "models": [
     {
-      "id": "model-not-selected",
-      "artifact": "local/model-artifact-placeholder",
-      "revision": "pin-before-deployment",
-      "maximumContextTokens": 4096,
+      "id": "mlx-community/Qwen3-8B-4bit",
+      "artifact": "mlx-community/Qwen3-8B-4bit",
+      "revision": "pin-after-hardware-evidence",
+      "maximumContextTokens": 8192,
       "maximumOutputTokens": 1024
     }
   ]
