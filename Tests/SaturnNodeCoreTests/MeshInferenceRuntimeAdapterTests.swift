@@ -7,7 +7,9 @@ private func makeNodeID(_ value: String = "saturn-node-sim-01") throws -> Saturn
     try #require(SaturnNodeIdentifier(rawValue: value))
 }
 
-private func makeRequestID(_ value: String = "11111111-1111-4111-8111-111111111111") throws -> RequestIdentifier {
+private func makeRequestID(
+    _ value: String = "11111111-1111-4111-8111-111111111111"
+) throws -> RequestIdentifier {
     try #require(RequestIdentifier(rawValue: value))
 }
 
@@ -18,7 +20,8 @@ private func makeModelID(_ value: String = "sim-model") throws -> ModelIdentifie
 private func makeRequest(
     requestID: RequestIdentifier? = nil,
     modelID: ModelIdentifier? = nil,
-    maxOutput: Int = 8
+    maxOutput: Int = 8,
+    deadlineAt: Date = Date().addingTimeInterval(30)
 ) throws -> SaturnNodeInferenceRequest {
     try SaturnNodeInferenceRequest(
         requestID: requestID ?? makeRequestID(),
@@ -29,8 +32,18 @@ private func makeRequest(
         inputText: "sim prompt",
         maximumContextTokens: 2048,
         maximumOutputTokens: maxOutput,
-        deadlineAt: Date().addingTimeInterval(30)
+        deadlineAt: deadlineAt
     )
+}
+
+private func expectContiguous(
+    _ events: [SaturnNodeInferenceEvent],
+    requestID: RequestIdentifier
+) {
+    for (index, event) in events.enumerated() {
+        #expect(event.sequence == index)
+        #expect(event.requestID == requestID)
+    }
 }
 
 @Test("Adapter maps SimulatedMLX capabilities into Saturn capabilities")
@@ -94,15 +107,10 @@ func normalCompletionSequence() async throws {
     } else {
         Issue.record("Expected terminal completed event")
     }
-
-    // Sequences must be contiguous starting at 0.
-    for (index, event) in events.enumerated() {
-        #expect(event.sequence == index)
-        #expect(event.requestID == request.requestID)
-    }
+    expectContiguous(events, requestID: request.requestID)
 }
 
-@Test("Cancel produces cancelled terminal and permits a subsequent request")
+@Test("Cancel preserves contiguous terminal sequence and permits a subsequent request")
 func cancelThenSubsequentRequest() async throws {
     let nodeID = try makeNodeID()
     let mesh = SimulatedMLXInferenceRuntime(
@@ -123,26 +131,23 @@ func cancelThenSubsequentRequest() async throws {
     )
 
     let stream = try await adapter.stream(request: first)
-    let collector = Task {
-        var events: [SaturnNodeInferenceEvent] = []
-        for try await event in stream {
-            events.append(event)
-            if event.type == .started {
-                break
-            }
+    var firstEvents: [SaturnNodeInferenceEvent] = []
+    var cancellationRequested = false
+
+    for try await event in stream {
+        firstEvents.append(event)
+        if event.type == .delta, !cancellationRequested {
+            cancellationRequested = true
+            try await adapter.cancel(requestID: first.requestID)
         }
-        return events
     }
 
-    // Give the simulation a moment to register the request, then cancel.
-    try await Task.sleep(nanoseconds: 2_000_000)
-    try await adapter.cancel(requestID: first.requestID)
+    #expect(cancellationRequested)
+    #expect(firstEvents.first?.type == .started)
+    #expect(firstEvents.last?.type == .cancelled)
+    #expect(firstEvents.last?.isTerminal == true)
+    expectContiguous(firstEvents, requestID: first.requestID)
 
-    // Drain remaining events (may already be terminal).
-    for try await _ in stream {}
-    _ = try await collector.value
-
-    // Second request must succeed after cleanup.
     let second = try makeRequest(
         requestID: try makeRequestID("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"),
         maxOutput: 4
@@ -152,8 +157,45 @@ func cancelThenSubsequentRequest() async throws {
     for try await event in secondStream {
         secondEvents.append(event)
     }
+
     #expect(secondEvents.first?.type == .started)
     #expect(secondEvents.last?.isTerminal == true)
+    expectContiguous(secondEvents, requestID: second.requestID)
+}
+
+@Test("Already-expired request fails before mesh generation starts")
+func expiredRequestFailsClosed() async throws {
+    let adapter = MeshInferenceRuntimeAdapter(
+        mesh: SimulatedMLXInferenceRuntime(),
+        nodeID: try makeNodeID(),
+        serviceVersion: "0.0.0-sim"
+    )
+    let request = try makeRequest(deadlineAt: Date().addingTimeInterval(-1))
+
+    await #expect(throws: SaturnNodeError.requestTimedOut) {
+        _ = try await adapter.stream(request: request)
+    }
+}
+
+@Test("Mesh timeout maps to requestTimedOut")
+func runtimeTimeoutMapsToRequestTimedOut() async throws {
+    let mesh = SimulatedMLXInferenceRuntime(
+        config: SimulatedInferenceConfig(
+            modelID: "sim-model",
+            forceTimeout: true
+        )
+    )
+    let adapter = MeshInferenceRuntimeAdapter(
+        mesh: mesh,
+        nodeID: try makeNodeID(),
+        serviceVersion: "0.0.0-sim"
+    )
+    let request = try makeRequest()
+    let stream = try await adapter.stream(request: request)
+
+    await #expect(throws: SaturnNodeError.requestTimedOut) {
+        for try await _ in stream {}
+    }
 }
 
 @Test("Capacity exhausted maps to nodeSaturated")
