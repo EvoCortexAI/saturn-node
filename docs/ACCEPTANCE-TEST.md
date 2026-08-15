@@ -11,6 +11,7 @@ The deterministic adapter gate also requires:
 - a successful request after cancellation;
 - already-expired requests rejected before mesh generation starts;
 - mesh timeout failures mapped to `requestTimedOut`;
+- in-flight wall-clock `deadlineAt` expiry during generation mapped to `requestTimedOut` with mesh cancel + quiescence + successful subsequent request;
 - sustained-runner orchestration exercised against the deterministic simulated mesh runtime;
 - quiescence checked after every ordinary, cancellation, and recovery terminal.
 
@@ -115,9 +116,14 @@ Do not use repeated shell invocations of `--real-smoke` as a substitute for sust
 
 ## Deadline gate
 
-Current adapter behavior rejects a request that is already expired before mesh generation begins and maps a runtime-emitted timeout to `requestTimedOut`.
+The mesh adapter:
 
-The adapter does **not yet** enforce a hard wall-clock `deadlineAt` that expires while real generation is already in progress. That behavior must be implemented and accepted before production transport is enabled. Do not interpret sustained hardware acceptance as closing the in-flight deadline/runtime-contract gate.
+- rejects a request that is already expired before mesh generation begins (`requestTimedOut`);
+- maps a runtime-emitted timeout to `requestTimedOut`;
+- enforces a hard wall-clock `deadlineAt` that expires **while generation is already in progress**: cancels the mesh request, finishes the stream with `requestTimedOut`, clears sequence state, and leaves the runtime quiescent so a subsequent request can succeed;
+- keeps explicit cancel-before-deadline behavior as a contiguous `.cancelled` terminal (not remapped to timeout).
+
+Deterministic coverage lives in `InFlightDeadlineTests`. Optional one-shot hardware confirmation is evidence-only and is not a sustained campaign. Closing this runtime-contract gate does **not** authorize a listener, credentials, composition change, or deployment.
 
 ## Scope boundary
 
