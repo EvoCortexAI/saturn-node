@@ -123,7 +123,7 @@ A failed real smoke exits non-zero. Passing the one-shot commands is necessary b
 
 ## Deadline status
 
-The adapter rejects requests that are already expired and maps runtime timeout failures to `requestTimedOut`. A hard wall-clock deadline that expires *during* active generation is not yet enforced by the adapter and remains an explicit Node runtime-contract gate before production transport is enabled.
+The adapter rejects requests that are already expired, maps runtime timeout failures to `requestTimedOut`, and enforces a hard wall-clock `deadlineAt` that expires *during* active generation: mesh cancel, stream finishes with `requestTimedOut`, sequence cleared, subsequent request allowed. Explicit cancel before the deadline still yields a contiguous `.cancelled` terminal. Closing this runtime-contract gate does not authorize transport, credentials, or deployment.
 
 ## Contract review
 
@@ -152,7 +152,7 @@ The default executable intentionally reports that no production listener or infe
 
 1. Record the basic real M4 Pro hardware evidence for the pinned `Qwen3-8B-4bit` path through both mesh and Node in the controlling trackers.
 2. Pass the sustained 20/20 ordinary + 5/5 cancellation/recovery acceptance and a fresh-process restart on the selected hardware host.
-3. Enforce in-flight request deadlines and prove timeout cleanup on real hardware as a separate runtime-contract gate.
+3. In-flight `deadlineAt` runtime-contract gate (deterministic tests required; optional one-shot hardware confirmation).
 4. Freeze the canonical workload/compute contract and compatible authority binding.
 5. Add production credential/authority verification after security review.
 6. Add private transport, disconnect propagation, health/recovery behavior, and managed restart acceptance.

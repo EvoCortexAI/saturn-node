@@ -14,6 +14,7 @@ import SaturnMLXMesh
 /// - synthesize contiguous sequence numbers required by Saturn
 /// - preserve sequence state through cancellation until the terminal event
 /// - reject already-expired requests before starting inference
+/// - enforce a hard wall-clock `deadlineAt` while generation is in progress
 /// - propagate consumer cancellation into the mesh runtime
 /// - map mesh errors onto `SaturnNodeError`
 /// - keep prompt and generated text out of any telemetry path it owns
@@ -23,7 +24,6 @@ import SaturnMLXMesh
 /// - parse workload credentials or authority receipts
 /// - own admission, allowlist, or revocation policy
 /// - download weights (that is `MeshModelInferenceRuntime.loadPrimary`)
-/// - yet enforce an in-flight wall-clock deadline after generation has started
 public actor MeshInferenceRuntimeAdapter: SaturnNodeInferenceRuntime {
     private let mesh: any MLXInferenceRuntime
     private let nodeID: SaturnNodeIdentifier
@@ -87,7 +87,8 @@ public actor MeshInferenceRuntimeAdapter: SaturnNodeInferenceRuntime {
     public func stream(
         request: SaturnNodeInferenceRequest
     ) async throws -> AsyncThrowingStream<SaturnNodeInferenceEvent, Error> {
-        guard request.deadlineAt > Date() else {
+        let deadline = request.deadlineAt
+        guard deadline > Date() else {
             throw SaturnNodeError.requestTimedOut
         }
 
@@ -109,25 +110,76 @@ public actor MeshInferenceRuntimeAdapter: SaturnNodeInferenceRuntime {
                     return
                 }
 
+                // Watchdog: cancel mesh generation when the wall-clock deadline hits,
+                // even if no further chunks have arrived yet.
+                let watchdog = Task { [mesh = self.mesh] in
+                    let remaining = deadline.timeIntervalSinceNow
+                    if remaining > 0 {
+                        let nanoseconds = UInt64(remaining * 1_000_000_000)
+                        try? await Task.sleep(nanoseconds: nanoseconds)
+                    }
+                    guard !Task.isCancelled else { return }
+                    await mesh.cancel(requestID: meshRequestID)
+                }
+
+                var timedOut = false
+                var sawTerminal = false
+
                 do {
                     for try await chunk in meshStream {
+                        if Task.isCancelled {
+                            break
+                        }
+
+                        let pastDeadline = Date() >= deadline
+
+                        // Mesh cancelled after watchdog / explicit deadline trip:
+                        // map to requestTimedOut, do not yield a cancelled terminal.
+                        if case .cancelled = chunk, pastDeadline {
+                            timedOut = true
+                            break
+                        }
+
+                        if pastDeadline {
+                            timedOut = true
+                            await self.mesh.cancel(requestID: meshRequestID)
+                            break
+                        }
+
                         let event = try await self.mapChunk(chunk, for: request)
                         continuation.yield(event)
                         if event.isTerminal {
+                            sawTerminal = true
                             break
                         }
                     }
-                    continuation.finish()
+
+                    if timedOut {
+                        continuation.finish(throwing: SaturnNodeError.requestTimedOut)
+                    } else if !Task.isCancelled {
+                        continuation.finish()
+                    }
                 } catch is CancellationError {
                     // Consumer cancellation owns termination of the outer stream.
                 } catch let error as MeshInferenceError {
-                    continuation.finish(throwing: Self.mapError(error))
+                    if timedOut || Date() >= deadline {
+                        continuation.finish(throwing: SaturnNodeError.requestTimedOut)
+                    } else {
+                        continuation.finish(throwing: Self.mapError(error))
+                    }
                 } catch {
-                    continuation.finish(
-                        throwing: SaturnNodeError.malformedRequest(error.localizedDescription)
-                    )
+                    if timedOut || Date() >= deadline {
+                        continuation.finish(throwing: SaturnNodeError.requestTimedOut)
+                    } else {
+                        continuation.finish(
+                            throwing: SaturnNodeError.malformedRequest(error.localizedDescription)
+                        )
+                    }
                 }
 
+                watchdog.cancel()
+                // Silence unused warning if terminal path never set sawTerminal.
+                _ = sawTerminal
                 await self.clearSequence(for: request.requestID)
             }
 
