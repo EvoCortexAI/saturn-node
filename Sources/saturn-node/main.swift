@@ -191,7 +191,10 @@ struct SaturnNodeBootstrap {
         } catch {
             // Keep standard acceptance output free of prompt, response, path,
             // credential, and potentially sensitive dependency error details.
-            FileHandle.standardError.write(Data("result=fail\n".utf8))
+            let failureReason = failureDiagnosticCode(for: error)
+            FileHandle.standardError.write(
+                Data("failure_reason=\(failureReason)\nresult=fail\n".utf8)
+            )
             return false
         }
     }
@@ -239,6 +242,24 @@ struct SaturnNodeBootstrap {
         print("\(prefix)_min_ms=\(formatMilliseconds(summary.minimumMilliseconds))")
         print("\(prefix)_median_ms=\(formatMilliseconds(summary.medianMilliseconds))")
         print("\(prefix)_p95_ms=\(formatMilliseconds(summary.p95Milliseconds))")
+    }
+
+    private static func failureDiagnosticCode(for error: Error) -> String {
+        if let acceptanceError = error as? SaturnNodeHardwareAcceptanceError {
+            return acceptanceError.diagnosticCode
+        }
+        if let nodeError = error as? SaturnNodeError {
+            return "node_\(nodeError.problemCode.rawValue)"
+        }
+        if let smokeFailure = error as? SmokeFailure {
+            switch smokeFailure {
+            case .invalidIdentifiers:
+                return "invalid_identifiers"
+            case .modelNotAdvertised:
+                return "model_not_advertised"
+            }
+        }
+        return "runtime_error"
     }
 
     private static func milliseconds(_ duration: Duration) -> String {
