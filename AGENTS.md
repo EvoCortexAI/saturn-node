@@ -36,11 +36,14 @@ Ordinary CI remains deterministic and must not download model weights. Real MLX 
 ```sh
 swift run saturn-node --real-smoke
 swift run saturn-node --real-smoke --cancel-recovery
+swift run saturn-node --real-smoke --requests 20 --cancellations 5
 ```
+
+The sustained command means 20 ordinary completions plus 5 independent cancellation/recovery cycles in one process and one model load. It must fail if any request, cancellation, recovery, sequence validation, or quiescence check fails.
 
 Standard acceptance output must remain metadata-only. `--show-content` is local-debug only and must not be used in captured acceptance artifacts.
 
-A passing hardware smoke does not authorize a listener, production composition, credentials, launchd installation, firewall changes, or deployment. Follow `docs/ACCEPTANCE-TEST.md` for the remaining gates.
+A passing one-shot smoke closes only the basic real-runtime gate. Sustained counts and a fresh-process restart are still required for the sustained hardware gate. Neither gate authorizes a listener, production composition, credentials, launchd installation, firewall changes, or deployment. Follow `docs/ACCEPTANCE-TEST.md` for the remaining gates.
 
 ## Contract rule
 
