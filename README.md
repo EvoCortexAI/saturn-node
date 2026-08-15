@@ -85,6 +85,7 @@ The repository contains:
 - a standard-library validator executed by CI;
 - a runtime-agnostic `MeshInferenceRuntimeAdapter` that supports deterministic simulation and explicit real MLX hardware smoke;
 - a real-hardware `--real-smoke` path that remains opt-in and does not open a listener;
+- a deterministic sustained-acceptance runner that reuses one loaded runtime for repeated completion and cancellation/recovery cycles;
 - non-secret example configuration and operations guidance.
 
 It does not provide a production listener, production cryptographic verifier, production runtime adapter selection, model installation, launchd service, firewall rule, or deployed SN01 service.
@@ -109,17 +110,20 @@ On the selected Apple Silicon acceptance host:
 ```sh
 swift run saturn-node --real-smoke
 swift run saturn-node --real-smoke --cancel-recovery
+swift run saturn-node --real-smoke --requests 20 --cancellations 5
 ```
 
 The baseline command loads the pinned real mesh runtime, sends one request through `MeshInferenceRuntimeAdapter`, validates contiguous Saturn event sequencing, and reports metadata-only load / first-delta / generation timing. Generated content is suppressed by default.
 
-The cancellation command additionally cancels an active real request, requires a contiguous cancelled terminal, verifies no active mesh request remains, and requires a subsequent request to complete successfully. `--show-content` is local-debug only and must not be used for standard acceptance evidence.
+The legacy cancellation command additionally cancels an active real request, requires a contiguous cancelled terminal, verifies no active mesh request remains, and requires a subsequent request to complete successfully. `--show-content` is local-debug only and must not be used for standard acceptance evidence.
 
-A failed real smoke exits non-zero. Passing these commands is necessary hardware evidence, not production-service acceptance.
+The sustained command loads the model once in one process, runs 20 ordinary completion requests, then performs 5 independent cancellation → quiescence → recovery cycles. Each recovery request is additive to the 20 ordinary requests. It reports per-request timing plus internal min/median/p95 summaries and fails closed on request, cancellation, recovery, sequencing, or quiescence failure.
+
+A failed real smoke exits non-zero. Passing the one-shot commands is necessary basic hardware evidence, not sustained or production-service acceptance. The sustained hardware gate also requires the configured counts plus a successful fresh-process restart; see `docs/ACCEPTANCE-TEST.md`.
 
 ## Deadline status
 
-The adapter rejects requests that are already expired and maps runtime timeout failures to `requestTimedOut`. A hard wall-clock deadline that expires *during* active generation is not yet enforced by the adapter and remains an explicit Node gate before production transport is enabled.
+The adapter rejects requests that are already expired and maps runtime timeout failures to `requestTimedOut`. A hard wall-clock deadline that expires *during* active generation is not yet enforced by the adapter and remains an explicit Node runtime-contract gate before production transport is enabled.
 
 ## Contract review
 
@@ -146,9 +150,9 @@ The default executable intentionally reports that no production listener or infe
 
 ## Next gates
 
-1. Record real M4 Pro hardware evidence for the pinned `Qwen3-8B-4bit` path through both mesh and Node.
-2. Repeat sequential-completion and controlled-cancellation acceptance at the required counts.
-3. Enforce in-flight request deadlines and prove timeout cleanup on real hardware.
+1. Record the basic real M4 Pro hardware evidence for the pinned `Qwen3-8B-4bit` path through both mesh and Node in the controlling trackers.
+2. Pass the sustained 20/20 ordinary + 5/5 cancellation/recovery acceptance and a fresh-process restart on the selected hardware host.
+3. Enforce in-flight request deadlines and prove timeout cleanup on real hardware as a separate runtime-contract gate.
 4. Freeze the canonical workload/compute contract and compatible authority binding.
 5. Add production credential/authority verification after security review.
 6. Add private transport, disconnect propagation, health/recovery behavior, and managed restart acceptance.
