@@ -2,7 +2,8 @@
 
 **Status:** In development - service boundary and proposed v1 contract only  
 **Visibility:** Private  
-**Operational service:** Not implemented
+**Operational service:** Not implemented  
+**Current development license:** Apache License 2.0. See [`LICENSE`](LICENSE) and [`NOTICE`](NOTICE).
 
 Saturn-Node is the private, workload-authenticated MLX inference service in the Saturn execution plane.
 
@@ -160,4 +161,10 @@ The default executable intentionally reports that no production listener or infe
 
 ## License
 
-This is private EvoCortexAI source. No public license or rights grant is implied by repository access.
+Current `main` first-party materials are offered under the Apache License, Version 2.0. See `LICENSE` and `NOTICE`.
+
+This repository has no published semantic release tag. The next published semantic release is the first Apache-2.0 release. Do not treat prior private snapshots as Apache-2.0 publication.
+
+Third-party software remains under its own terms. This license does not grant trademark rights in Saturn, Saturn-Node, or EvoCortexAI except as required for reasonable attribution.
+
+This change licenses current development source; it does not by itself make the GitHub repository public.
