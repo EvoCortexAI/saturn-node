@@ -1,8 +1,29 @@
 # Releasing Saturn-Node
 
+**Type:** release-procedure
+**Status:** binding-after-merge; published-tag-pending for `0.1.0`
+**Authority:** procedure only; merge of this file does not create a tag or authorize SN01
+**Schema:** docs/MARKDOWN-SCHEMA.md
+
+Architecture views: [`ARCHITECTURE.md`](ARCHITECTURE.md).
+
 Saturn-Node is released as a versioned Swift package. A release is a compatibility and provenance boundary, not an operational deploy.
 
 Merging documentation or feature work does not itself authorize or create a release. No release tag authorizes a listener, production credentials, launchd, or SN01 install.
+
+```mermaid
+flowchart TD
+    A[Choose 0.1.0] --> B[Update CHANGELOG + docs/releases]
+    B --> C[Merge prep PR to main]
+    C --> D[Record exact main SHA]
+    D --> E[CI green on that SHA]
+    E --> F{Founder approves version + SHA?}
+    F -->|no| G[Stop. No tag]
+    F -->|yes| H[Tag 0.1.0 on that SHA]
+    H --> I[GitHub release records SHA]
+    I --> J[Verify tag resolves to SHA]
+    J --> K[After mesh 0.2.0 tag: separate pin-switch PR]
+```
 
 ## Release authority
 
