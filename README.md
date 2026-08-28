@@ -7,6 +7,8 @@
 
 Saturn-Node is the private, workload-authenticated MLX inference service in the Saturn execution plane.
 
+Architecture flowcharts: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). Versioning: [`docs/VERSIONING.md`](docs/VERSIONING.md).
+
 ## Canonical runtime path
 
 ```mermaid
@@ -100,6 +102,7 @@ Primary allowlist candidate aligned with mesh `AcceptanceModelPin`:
 | Model ID | `mlx-community/Qwen3-8B-4bit` |
 | Example manifest | `config/model-manifest.example.json` |
 | Mesh revision | `8ce1d6f6d6f5304f526019a5b5bcbf3f2b2f783e` |
+| Mesh 0.2.0 candidate | `9aab96a2e24817fbb1898f8c133ad44469986805` (docs merge; not a tag) |
 | Mesh procedure | `saturn-mlx-mesh` → `Docs/ACCEPTANCE-MODEL.md` |
 
 **32B is not the primary KF path.** Default composition remains `UnavailableInferenceRuntime`. The real runtime is selected only by explicit hardware-smoke invocation and does not make Saturn-Node operational.
