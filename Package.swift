@@ -15,11 +15,11 @@ let package = Package(
             url: "https://github.com/EvoCortexAI/evo-ethics-framework.git",
             branch: "main"
         ),
-        // Mesh: Swift 6.3 / platform 26 baseline, real MeshModelInferenceRuntime,
-        // hardware acceptance smoke, and deterministic simulation for CI.
+        // Mesh 0.2.x: stable Node adapter + Qwen3-8B-4bit pin + smoke.
+        // Tag 0.2.0 = 9aab96a2e24817fbb1898f8c133ad44469986805.
         .package(
             url: "https://github.com/EvoCortexAI/saturn-mlx-mesh.git",
-            revision: "8ce1d6f6d6f5304f526019a5b5bcbf3f2b2f783e"
+            .upToNextMinor(from: "0.2.0")
         )
     ],
     targets: [
