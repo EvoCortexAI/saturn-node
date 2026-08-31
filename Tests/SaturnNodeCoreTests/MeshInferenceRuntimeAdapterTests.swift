@@ -177,6 +177,32 @@ func expiredRequestFailsClosed() async throws {
     }
 }
 
+@Test("Frozen clock admits only a future deadline")
+func frozenClockDeadlineAdmission() async throws {
+    let frozen = Date(timeIntervalSince1970: 1_700_000_000)
+    let adapter = MeshInferenceRuntimeAdapter(
+        mesh: SimulatedMLXInferenceRuntime(),
+        nodeID: try makeNodeID(),
+        serviceVersion: "0.0.0-sim",
+        now: { frozen }
+    )
+
+    await #expect(throws: SaturnNodeError.requestTimedOut) {
+        _ = try await adapter.stream(request: try makeRequest(deadlineAt: frozen))
+    }
+    await #expect(throws: SaturnNodeError.requestTimedOut) {
+        _ = try await adapter.stream(request: try makeRequest(deadlineAt: frozen.addingTimeInterval(-5)))
+    }
+
+    let live = try await adapter.stream(request: try makeRequest(deadlineAt: frozen.addingTimeInterval(30)))
+    var events: [SaturnNodeInferenceEvent] = []
+    for try await event in live {
+        events.append(event)
+    }
+    #expect(events.first?.type == .started)
+    #expect(events.last?.isTerminal == true)
+}
+
 @Test("Mesh timeout maps to requestTimedOut")
 func runtimeTimeoutMapsToRequestTimedOut() async throws {
     let mesh = SimulatedMLXInferenceRuntime(
