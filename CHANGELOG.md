@@ -12,6 +12,7 @@ A changelog section is not a published tag.
 - Extract `MeshRuntimeMapping` and pin mesh→Saturn error, state, and deadline-admission tables in Swift Testing.
 - Slim `MeshInferenceRuntimeAdapter` onto that mapping; optional injected clock for admission.
 - Compress README / architecture / schema so published mesh `0.2.0` is the documented pin, not the retired revision pin.
+- Add Linux policy lane for v1 compute-contract validation. Swift/MLX build and deploy remain Apple Silicon only.
 - Credential envelope ADR, production verifier, private transport, and composition seams remain open under issue #4.
 
 ## [0.1.0] - 2026-08-28
