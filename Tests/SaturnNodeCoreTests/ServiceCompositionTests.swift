@@ -101,6 +101,18 @@ func invalidConfigurationFailsClosed() throws {
     }
 }
 
+@Test("Unavailable composition uses the fail-closed runtime, not a fake")
+func unavailableCompositionUsesUnavailableRuntime() throws {
+    let composition = try SaturnNodeServiceComposition.unavailable()
+    #expect(composition.runtime is UnavailableInferenceRuntime)
+    #expect(composition.identity is UnavailableNodeIdentity)
+    #expect(composition.revocation is UnavailableRevocationState)
+    #expect(composition.replay is UnavailableReplayProtection)
+    #expect(composition.allowlist is UnavailableModelAllowlist)
+    #expect(composition.admission is UnavailableAdmissionController)
+    #expect(composition.lifecycle is UnavailableServiceLifecycle)
+}
+
 @Test("Unavailable composition fails closed on every required seam")
 func unavailableCompositionFailsClosed() async throws {
     let composition = try SaturnNodeServiceComposition.unavailable()
@@ -279,7 +291,6 @@ func successfulStreamCleansUpForNextRequest() async throws {
     #expect(events.last?.isTerminal == true)
     #expect(await admission.activeCount() == 0)
 
-    // Second request with fresh identity must succeed after cleanup.
     let secondRequest = try SaturnNodeInferenceRequest(
         requestID: try requestID("44444444-4444-4444-8444-444444444444"),
         requestNonce: try nonce("nonce_second_request_01"),
