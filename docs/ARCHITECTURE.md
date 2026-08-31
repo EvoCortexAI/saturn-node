@@ -2,10 +2,10 @@
 
 **Type:** architecture
 **Status:** binding-after-merge for the `0.1.x` contract diagrams
-**Authority:** diagrams describe the fail-closed boundary; they do not publish a tag or authorize SN01
+**Authority:** diagrams describe the fail-closed boundary; they do not authorize SN01
 **Schema:** docs/MARKDOWN-SCHEMA.md
 
-These flowcharts are the architecture views for Saturn-Node `0.1.x`. Issue #4 remains open.
+Saturn-Node `0.1.x` views. Issue #4 remains open.
 
 ## Saturn execution plane
 
@@ -52,25 +52,25 @@ flowchart TB
     PEP -->|invalid / expired| Deny[Fail closed]
 ```
 
-Default composition is fail-closed. Real MLX is not constructed by the ordinary executable.
+Default composition is fail-closed. The ordinary executable does not construct real MLX.
 
 ## Mesh dependency
 
 ```mermaid
 flowchart LR
     NodePkg[Saturn-Node Package.swift]
-    Pin["revision 8ce1d6f6 hardware pin"]
-    Prep["mesh main 9aab96a2 after #15"]
-    Tag["mesh tag 0.2.0"]
+    Tag["mesh tag 0.2.0 @ 9aab96a2"]
     Semver[".upToNextMinor from 0.2.0"]
+    NodeTag["Node tag 0.1.0 @ ba5f7c61"]
+    Evidence["hardware evidence 8ce1d6f6"]
 
-    NodePkg --> Pin
-    Prep -. docs candidate, not a tag .-> Tag
     Tag --> Semver
-    Pin -. replace only after tag .-> Semver
+    NodePkg --> Semver
+    NodeTag -. shipped revision pin; do not retarget .-> Evidence
+    Evidence -. provenance only .-> Tag
 ```
 
-`saturn-mlx-mesh` PR #15 merged to `main` at `9aab96a2e24817fbb1898f8c133ad44469986805`. That SHA is the mesh `0.2.0` *candidate*. It is not the tag. Node keeps revision `8ce1d6f6d6f5304f526019a5b5bcbf3f2b2f783e` until the tag exists.
+Published mesh tag `0.2.0` is `9aab96a2e24817fbb1898f8c133ad44469986805`. Current Node `main` consumes `.upToNextMinor(from: "0.2.0")`. Node `0.1.0` keeps the revision pin it shipped; do not retarget that tag.
 
 ## Version identity
 
@@ -79,38 +79,32 @@ flowchart TB
     Policy[docs/VERSIONING.md]
     Procedure[docs/RELEASING.md]
     Record[docs/releases/0.1.0.md]
-    Log[CHANGELOG 0.1.0]
-    Merge[merge this prep PR]
-    SHA[main commit SHA]
-    Approve[Founder approval]
+    Log[CHANGELOG]
     Tag["Git tag 0.1.0"]
-    GH[GitHub release + SHA]
+    SHA["ba5f7c61"]
 
-    Policy --> Procedure
-    Record --> Merge
-    Log --> Merge
-    Merge --> SHA --> Approve --> Tag --> GH
-
+    Policy --> Procedure --> Record --> Tag
+    Log --> Tag
+    Tag --> SHA
     Log -. is not .-> Tag
     Record -. is not .-> Tag
-    Merge -. does not create .-> Tag
 ```
 
 ## Release procedure
 
 ```mermaid
 flowchart TD
-    A[Choose 0.1.0] --> B[Update CHANGELOG + docs/releases]
+    A[Choose 0.x.y] --> B[Update CHANGELOG + docs/releases]
     B --> C[Merge prep PR to main]
     C --> D[Record exact main SHA]
     D --> E[CI green on that SHA]
     E --> F{Founder approves version + SHA?}
     F -->|no| G[Stop. No tag]
-    F -->|yes| H[Tag 0.1.0 on that SHA]
+    F -->|yes| H[Tag on that SHA]
     H --> I[GitHub release records SHA]
-    I --> J[Verify tag resolves to SHA]
-    J --> K[After mesh 0.2.0 tag: separate pin-switch PR]
 ```
+
+No tag authorizes a listener or SN01.
 
 ## Doc architecture
 

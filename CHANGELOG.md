@@ -9,6 +9,9 @@ A changelog section is not a published tag.
 ## [Unreleased]
 
 - Consume `saturn-mlx-mesh` `0.2.0` via `.upToNextMinor(from: "0.2.0")`. Tagged mesh SHA is `9aab96a2e24817fbb1898f8c133ad44469986805`. Does not retarget Node `0.1.0`.
+- Extract `MeshRuntimeMapping` and pin mesh→Saturn error, state, and deadline-admission tables in Swift Testing.
+- Slim `MeshInferenceRuntimeAdapter` onto that mapping; optional injected clock for admission.
+- Compress README / architecture / schema so published mesh `0.2.0` is the documented pin, not the retired revision pin.
 - Credential envelope ADR, production verifier, private transport, and composition seams remain open under issue #4.
 
 ## [0.1.0] - 2026-08-28
