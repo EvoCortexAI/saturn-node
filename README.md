@@ -1,12 +1,14 @@
 # Saturn-Node
 
-**Status:** In development — fail-closed service boundary, published `0.1.0`  
+**Status:** In development — fail-closed service boundary, published `0.1.0`; `0.1.x` cueing after green main CI  
 **Operational service:** Not implemented  
 **License:** Apache License 2.0 ([`LICENSE`](LICENSE), [`NOTICE`](NOTICE))
 
 Private, workload-authenticated MLX inference service. Frontends never call it. Saturn-Control assigns compute and issues the short-lived lease; `saturn-mlx-mesh` runs MLX in-process.
 
 Diagrams: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). Versioning: [`docs/VERSIONING.md`](docs/VERSIONING.md).
+
+Consumers take the latest development tag with `.upToNextMinor(from: "0.1.0")` and a committed `Package.resolved`. Do not pin `main`. Cueing does not authorize a listener, production verifier, launchd, or SN01.
 
 ## Boundary
 
