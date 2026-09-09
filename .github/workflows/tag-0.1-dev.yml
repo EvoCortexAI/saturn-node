@@ -192,7 +192,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          workspace="$(cd \"$GITHUB_WORKSPACE\" && pwd -P)"
+          workspace="$(cd "$GITHUB_WORKSPACE" && pwd -P)"
           repository_root="$(git rev-parse --show-toplevel)"
           [[ "$workspace" == "$repository_root" ]] || {
             echo "Refusing cleanup outside the checked-out repository"
