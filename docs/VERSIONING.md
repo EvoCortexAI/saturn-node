@@ -22,13 +22,15 @@ Package.resolved = exact consumer resolution
 
 Do not use a floating branch as a package dependency. Do not retarget a released version tag.
 
+Tag form is `0.X.x` with no `v` prefix. Node's pre-1.0 line is `0.1.x`. Do not publish `0.0.x`, `v0.1.x`, or a GitHub-hosted cue job.
+
 The operational release procedure is defined in `RELEASING.md`.
 
 ## Current release line
 
 The first published semantic release is `0.1.0` on SHA `ba5f7c61d87a2e111d9e1b70d78bb74b964a2454`. It is the first Apache-2.0 tagged release. The active pre-1.0 compatibility and development-cueing line is `0.1.x`.
 
-`0.1.0` is a fail-closed service-boundary package. It is **not** an operational listener, production verifier, or SN01 deploy. Cueing tags inherit that same non-operational status.
+`0.1.0` is a fail-closed service-boundary package. It is **not** an operational listener, production verifier, or SN01 deploy. Cueing tags inherit that same non-operational status. Formal `0.1.0` remains the GitHub Release marked Latest. Cue tags are prereleases.
 
 ## Development cueing (`0.1.x`)
 
@@ -41,6 +43,7 @@ Rules:
 - Tag the exact CI-green `main` SHA. Do not tag a merge commit that failed CI.
 - A commit that already carries a `0.1.x` tag is left unchanged.
 - Cueing tags are Apache-2.0.
+- Publication runs on the Linux self-hosted metadata lane after `workflow_run` of `Saturn-Node CI`. It does not use `ubuntu-latest` and does not pass `--latest`.
 - Cueing tags may include source-breaking changes versus `0.1.0` or versus the previous `0.1.x` tag. Consumers stay on `.upToNextMinor(from: "0.1.0")` and review `Package.resolved`.
 - Cueing tags do not require a `docs/releases/<version>.md` file or founder approval. They do **not** authorize a listener, production verifier, launchd, firewall, or SN01.
 - `0.2.0` and later minors, and `1.0.0`, remain founder-gated formal releases under `RELEASING.md`.
